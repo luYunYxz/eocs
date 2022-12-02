@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-for((i=1;i<16;i++))
+for((i=3;i<16;i++))
 do
     #echo "Or(a=a[$i],b=b[$i],out=out[$i]);"
     # j=$((i-1))
@@ -14,8 +14,10 @@ do
 #    echo "Or(a=as$i,b=bs$i,out=abs$i);"
 #     echo "Or(a=cs$i,b=abs$i,out=cbs$i);"
 #     echo "Or(a=ds$i,b=cbs$i,out=out[$i]);"
+    last=$((i-1))
+    echo "HalfAdder(a=int[$i],b=carry$last,sum=out[$i],carry=carry$i);"
 
-echo "b[$i]=sela"
+#echo "b[$i]=sela"
 
 
 done
