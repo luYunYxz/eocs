@@ -224,3 +224,57 @@ carry= in(0)
 
 ##### 总结
 
+
+#### 时序逻辑
+##### Bit
+  If load[t] == 1 then out[t+1] = in[t]
+                  else out does not change (out[t+1] = out[t])
+时序逻辑是用一个 Mux的选择器+ DFF数据触发器.其中涉及到FeedBack是允许的.就是后面出现的变量能够在前面提前出现.这里的变量在芯片上是一个连接.
+Bit中DFF会有两个输出,一个输出是指向了 开始的位置,还有一个是指向最终的输出.
+
+##### 寄存器
+是16位Bit的封装.共用一个load.
+
+##### PC
+一个16位的带有reset,load的控制位.
+因为带有16位,所以需要16位置的Bit来记录起状态. 这个不知道怎么做.
+这里搞错顺序了.
+
+##### RAM8 
+接口参数:
+IN in[16], load, address[3];
+OUT out[16];
+有一个16位的输入,和 load+三位的地址选择器.
+输出是对应寄存器的结果.
+
+其中需要8个16位的寄存器. int和这16位的寄存器连接.
+
+      用 address3+load生成对应的寄存器的 8个load地址.分别连接.
+第三步:将8个寄存器的out结果连接上一个Mux8Way16的选择器.用address帮助选出输出来.
+
+
+##### RAM64
+接口参数:
+    IN in[16], load, address[6];
+    OUT out[16];
+    这个是存放了64个Register.那么可以抽象为 8个RAM8.低三位作为 RAM8内部的寻址空间.
+    高八位用来定位8个RAM8中的一个.
+   总线宽度是16位,这个和之前一样.
+   //适用 DMUX8 + address[4..6]定位出其中的la
+   //用in+la + address[0..2]进行执行.得到8个 out
+   //用 Mux+address[4..6]+ out得到对应的out
+
+
+##### RAM512
+接口参数:
+    IN in[16], load, address[9];
+    OUT out[16];
+    高三位作为MUX和DMUX的选择.低6位作为RAM64内部的定位Register的实现.
+
+##### RAM4K
+接口参数:
+IN in[16], load, address[12];
+OUT out[16];
+
+使用8个RAM512来构造一个RAM4K
+
