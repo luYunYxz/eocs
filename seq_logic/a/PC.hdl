@@ -18,6 +18,14 @@ CHIP PC {
     PARTS:
     // Put your code here:
 
-    Mux16(a=in,b=false,sel=reset,out=resetOut);
-    Mux16(a=todo,b=resetOut,sel=load,out=loadOut);
+    Inc16(in=feedback,out=incOut);
+    Mux16(a=feedback,b=incOut,sel=inc,out=incRes);
+    Mux16(a=incRes,b=in,sel=load,out=loadRes);
+    Mux16(a=loadRes,b=false,sel=reset,out=resetOut);
+    
+    //1 表示将之前的结果写到 Register中.0表示读出来.
+    Register(in=resetOut,load=true,out=feedback,out=out);
+
+
+  
 }

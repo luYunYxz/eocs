@@ -278,3 +278,17 @@ OUT out[16];
 
 使用8个RAM512来构造一个RAM4K
 
+##### PC
+pc中包括了一个16位字长.有三个引脚,
+reset设置为1表示强制为0.
+reset为0的时候:
+   load == 1 的时候就使用新输入的值
+   load == 0 的时候:
+      inc == 1 的时候  out = out[t]+1
+      int == 0 的时候  out = out[t]
+因为是大量的逻辑判断.需要从最内部适用Mux来实现.
+同时这里涉及到了 out,那么需要适用feedback的实现.就是前面可以指向后面的引脚.
+第二点是前面做了很多的操作,最终需要讲结果写到Register中的时候,适用load = true表示将计算结果写到Register中去.
+Register中 load= false表示是读.load=true表示写.
+PC是每一次都在改变的.每次都是写.
+
