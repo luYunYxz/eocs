@@ -28,4 +28,29 @@ CHIP Memory {
 
     PARTS:
     // Put your code here:
+    //Memory  16K. 0 -16383  一共14位
+    // 0000 0000 0000 0000
+    // 0011 1111 1111 1111
+    // screen 8K
+    // 0100 0000 0000 0000
+    // 0101 0000 0000 0000
+    // 键盘 Keyboard
+    // 0110 0000 0000 0000
+
+    //因为位置是分配号的,所以 看最高两位 [13 .. 14 ]  这两位.
+    // 00,01 ,是 RAM
+    // 10  是screen  //11 是 KBD
+    // 这里需要一个 DMux4Way,这样能2分四 
+    //其中 a,b两个是 RAM16中的选项 . 这个和 RAM4 -- RAM8类似.将多个 小的空间组成打的空间.
+
+    DMux4Way(in=load,sel= address[13..14],a=lr1,b=lr2,c=ls,d=lk);
+    Or(a=lr1,b=lr2,out=lr);
+    RAM16K(in=in,load=lr,address=address[0..13],out=ramOut);
+
+    Screen(in=in,load=ls,address=address[0..12],out=screenOut);
+    Keyboard(out=kbdOut);
+
+    Mux4Way16(a=ramOut,b=ramOut,c=screenOut,d=kbdOut,sel=address[13..14],out=out);
+
+
 }
