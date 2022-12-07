@@ -1,0 +1,127 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in 
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM==0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time step. If reset==1 then the 
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    // Put your code here:
+    //根据设计好的cpu的内部架构图:cpu中有三部分. ARegister ; ALU; PC 这三部分
+    // ARegister
+    // ARegister的输入有两种,一种是  指令输入 和ALU的output
+    // 如果是地址指令,写入到A寄存器, 如果是C指令.这个时候,就需要看其中的C指令中的D1是否为1如果为1就将ALUOut写入ARegister 这里用到了指令,首先解析指令.
+    //D指令的 [15]位为 0. C指令的[15] 为1.这里需要对C指令进行译码.
+    And(a=instruction[15],b=instruction[0],out=j3);
+    And(a=instruction[15],b=instruction[1],out=j2);
+    And(a=instruction[15],b=instruction[2],out=j1);
+
+    And(a=instruction[15],b=instruction[3],out=d3);
+    And(a=instruction[15],b=instruction[4],out=d2);
+    And(a=instruction[15],b=instruction[5],out=d1);
+
+    And(a=instruction[15],b=instruction[6],out=c6);
+    And(a=instruction[15],b=instruction[7],out=c5);
+    And(a=instruction[15],b=instruction[8],out=c4);
+    And(a=instruction[15],b=instruction[9],out=c3);
+    And(a=instruction[15],b=instruction[10],out=c2);
+    And(a=instruction[15],b=instruction[11],out=c1);
+
+    And(a=instruction[15],b=instruction[12],out=ca);
+
+    Mux16(a=instruction,b=aluOut,sel=instruction[15],out=aRegisterIn);
+    //ARegister的写入条件有两种都可以:1.D地址指令.第二种是:C指令,且d1=1这两种情况. (not(instruction[15]) == 1 or (instruction[15] == 1 && d1==1 )))  not(i[15])  or d1
+    Not(in=instruction[15],out=notI);
+    Or(a=notI,b=d1,out=loadARegister);
+    ARegister(in=aRegisterIn,load=loadARegister,out=aRegisterOut);
+
+    // ALU
+    //先处理D寄存器
+    //x是D寄存器输入
+    //y是Mux16寄存器的输入
+    // ALU的c输入是c1=c6
+
+    DRegister(in=aluOut,load=d2,out=dRegisterOut);
+    Mux16(a=aRegisterOut,b=inM,sel=ca,out=yIn);
+    ALU(x=dRegisterOut,y=yIn,zx=c1,nx=c2,zy=c3,ny=c4,f=c5,no=c6,out=aluOut,out=outM,zr=aluZr,ng=aluNg);
+
+
+    // PC
+    //pc是程序计数器. reset是外部输入的. 判断一下是否是 跳转.
+    //最终 load中的 反向就是输出.
+    //计算load: jmp的指令 和 alu的out中的ng < 0,zr = 0 相互配合起来使用的.
+    // load ==1 的条件: j1 && j2 && j3 || j1&& aluNg || j2 zr || j3 &&(not(ng) && not(zr)) 
+    // inr = not(load)
+
+    Not(in=aluNg,out=notNg);
+    Not(in=aluZr,out=notZr);
+
+    And(a=j1,b=j2,out=andJ1j2);
+    And(a=andJ1j2,b=j3,out=andJ1J2J3);
+
+    And(a=j1,b=aluNg,out=andJ1Ng);
+    And(a=j2,b=aluZr,out=andJ2Zr);
+
+
+    And(a=j3,b=notNg,out=andJ3NotNg);
+    And(a=andJ3NotNg,b=notZr,out=andJ3Out);
+
+    Or(a=andJ1J2J3,b=andJ1Ng,out=orAllJ1);
+    Or(a=orAllJ1,b=andJ2Zr,out=orAllJ1J2);
+    Or(a=orAllJ1J2,b=andJ3Out,out=load);
+
+    Not(in=load ,out=incr);
+
+    PC(in=aRegisterOut,load=load,inc=incr,reset=reset,out[0..14]=pc);
+
+
+    //其他的输出引脚
+    //address 这个address是什么意思?
+    //writeM是否将数据写到M中
+    //Address[]  这个时候将 ALU的计算结果写到 M中去.
+    //这条指令中应该是j中的结果相关.当前是一条 C指令, 且j2=1 需要将ALU输出写到 Memory中
+
+    // writeM = instruction[15]==1 and d3==1
+    // addressM= aRegisterOut and write
+    // outM =  aluOut
+
+    And(a=instruction[15],b=d3,out=writeM);
+    And16(a=aRegisterOut,b=aRegisterOut,out[0..14]=addressM);
+
+    
+    
+
+}
